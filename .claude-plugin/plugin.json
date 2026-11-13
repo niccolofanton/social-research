@@ -1,0 +1,10 @@
+{
+  "name": "social-research",
+  "version": "1.0.0",
+  "description": "Research X (Twitter) and Reddit from your own logged-in Chrome via the Playwright MCP extension, and get a sourced synthesis.",
+  "author": { "name": "Niccolò Fanton" },
+  "homepage": "https://github.com/niccolofanton/social-research",
+  "repository": "https://github.com/niccolofanton/social-research",
+  "license": "MIT",
+  "keywords": ["research", "twitter", "x", "reddit", "playwright", "skill"]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "social-research",
+  "owner": { "name": "Niccolò Fanton" },
+  "plugins": [
+    {
+      "name": "social-research",
+      "source": "./",
+      "description": "Research X (Twitter) and Reddit from your own logged-in Chrome via the Playwright MCP extension, and get a sourced synthesis."
+    }
+  ]
+}
