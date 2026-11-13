@@ -13,17 +13,97 @@ concise, sourced synthesis: TL;DR, techniques, gotchas, resources, people/commun
 
 ## Requirements
 
-1. **Chrome** logged in to X and Reddit. Google is optional and only used for the Reddit complement.
-2. The **Playwright MCP Bridge** extension, from the Chrome Web Store.
-3. The **Playwright MCP server in extension mode**, with the extension token so it connects without the approval dialog:
+- **Chrome** (or another Chromium browser), logged in to X and Reddit. Google is optional and only used for the Reddit complement.
+- **Node.js 18+**, because the server runs with `npx`.
+- **Claude Code**.
+- The **Playwright MCP** server in *extension mode*, set up as described below.
 
-   ```bash
-   claude mcp add playwright -s user -e PLAYWRIGHT_MCP_EXTENSION_TOKEN=<your-token> -- npx @playwright/mcp@latest --extension
-   ```
+## Setting up Playwright MCP (extension mode)
 
-   To get the token, open the extension's connect page (the first time a client connects, Chrome shows a
-   dialog that says *"Set this environment variable to bypass the connection dialog"*) and copy it from there.
-   Restart Claude Code, or reconnect the server, after adding it.
+In extension mode, the Playwright MCP server doesn't launch a separate, empty browser. It drives
+**your real Chrome** through an extension, so it uses your existing logins and cookies.
+It can only see the tabs it opens in its own tab group, not your other tabs.
+
+### 1. Install the Chrome extension
+
+Install **[Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm)**
+from the Chrome Web Store.
+
+> Install it in the **Chrome profile that is logged in to X and Reddit**. The skill sees exactly
+> the logins of that profile and no others.
+
+### 2. Add the MCP server to Claude Code
+
+```bash
+claude mcp add playwright -s user -- npx @playwright/mcp@latest --extension
+```
+
+`-s user` makes it available in every project. Alternatively, add it by hand to `~/.claude.json`
+under `mcpServers`, or to a project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--extension"],
+      "env": {}
+    }
+  }
+}
+```
+
+### 3. Connect once and copy the token
+
+Start Claude Code and ask it to open any page with Playwright, for example: *"use playwright to open example.com"*.
+Chrome then opens the extension's connect page:
+
+- *"claude-code" is trying to connect to the Playwright Extension*, with a warning and a list of tabs.
+- A box titled *"Set this environment variable to bypass the connection dialog"*, containing
+  `PLAYWRIGHT_MCP_EXTENSION_TOKEN=…`, with **regenerate** and **copy** buttons.
+
+Copy that line. You can click **Allow & select** on a harmless tab, such as the extension's own
+"Welcome" tab, to finish this first connection.
+
+### 4. Save the token so the dialog is skipped
+
+Without the token, every new session waits for you to approve the dialog, and an unattended tool
+call hangs until it times out. Re-add the server with the token:
+
+```bash
+claude mcp remove playwright -s user
+```
+
+```bash
+claude mcp add playwright -s user -e PLAYWRIGHT_MCP_EXTENSION_TOKEN=<your-token> -- npx @playwright/mcp@latest --extension
+```
+
+You can also put it in the `env` object of the JSON config above. **Restart Claude Code** (or
+reconnect the server from `/mcp`). A server that is already running doesn't pick up new environment variables.
+
+### 5. Verify
+
+```bash
+claude mcp list
+```
+
+`playwright` should show as connected. Then ask Claude: *"with playwright, open old.reddit.com and
+tell me which user is logged in"*. It should answer right away, without a dialog in Chrome.
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| A tool call hangs, or Chrome shows the connect dialog | Token missing or wrong, or the server was started before you added it. Check the `env`, then restart or reconnect the server. |
+| Pages open but you're not logged in | The extension is installed in a different Chrome profile. Install it in the logged-in profile. |
+| Calls fail with a connection error | Chrome is closed or the extension is disabled. Open Chrome, enable it, and retry. |
+| A `.playwright-mcp/` folder appears in your project | Playwright writes page snapshots there on every navigation. Safe to delete; add it to `.gitignore`. |
+| You think the token leaked | Click **regenerate** on the connect page, update the `env`, restart Chrome and the server. |
+
+> **Security:** with the token set, any MCP client configured with it can drive your logged-in
+> browser without asking. Keep it out of shared configs and repos. This skill is read-only by
+> design, but other prompts using the same server may not be.
 
 ## Install
 
