@@ -45,7 +45,16 @@ Load the tools in one call:
   `.playwright-mcp/page-<timestamp>.yml` in the working directory. Never read those files (use the
   extractors). If the run happened inside a repo, mention the folder to the user at the end.
 - Playwright only sees tabs in its own tab group, never the user's other tabs. `browser_tabs`
-  `action: "list"` → if empty, `browser_navigate` opens one. Close it at the end (`browser_close`).
+  `action: "list"` → if empty, `browser_navigate` opens one. Work in **one tab** and close it only
+  at the end (`browser_close`): closing the last controlled tab drops the connection, and the
+  reconnect brings Chrome to the front again.
+- **Keep Chrome in the background.** Never use `browser_tabs` `action: "select"` (it sends
+  `bringToFront`). Chrome jumps to the front once per connection unless the server runs with
+  `--background` / `PLAYWRIGHT_MCP_BACKGROUND=1`; if the user complains about it, suggest that.
+- **Visibility check** after the first navigation:
+  `() => document.visibilityState`. `hidden` (background mode, Chrome on another desktop, or a
+  covered window) = the page doesn't render: DOM reading and all extractors still work, but
+  scrolling won't load more content. On X use date paging (§2) instead of scrolling.
 
 Helpers (run with `browser_evaluate`; `function` must be `() => …`):
 - Scroll one screen: `() => window.scrollBy(0, window.innerHeight)`, then `browser_wait_for` `time: 2`.
@@ -99,8 +108,10 @@ Operators (verified on third-party guides, Nov 2026; X changes them):
 Also run one query scoped to known experts (`from:a OR from:b`) when they are obvious.
 
 Extractor, tested Nov 2026 — returns only posts not seen before on this page (X removes
-off-screen posts while scrolling), skips ads. Scroll one screen and run it again for more
-(each scroll adds only a few posts):
+off-screen posts while scrolling), skips ads. **More results:** if the page is `visible`, scroll one
+screen and run it again (each scroll adds only a few posts). If it's `hidden`, scrolling loads nothing:
+page by navigation instead — rerun the search with `until:<oldest collected post's date + 1 day>`
+(`until` is date-level and exclusive, so this keeps the rest of that day) and dedup by link:
 
 ```js
 () => { const seen = (window.__seen ??= new Set()); const out = [];
